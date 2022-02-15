@@ -57,7 +57,7 @@ impl<Req: KvRequest> Plan for Dispatch<Req> {
     }
 }
 
-const MULTI_REGION_CONCURRENCY: usize = 16;
+const MULTI_REGION_CONCURRENCY: usize = 32;
 
 pub struct RetryableMultiRegion<P: Plan, PdC: PdClient> {
     pub(super) inner: P,
