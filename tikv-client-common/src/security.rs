@@ -8,7 +8,7 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     sync::Arc,
-    time::Duration,
+    time::Duration, ffi::CString,
 };
 
 lazy_static::lazy_static! {
@@ -80,6 +80,7 @@ impl SecurityManager {
             .keepalive_time(Duration::from_secs(10))
             .keepalive_timeout(Duration::from_secs(3))
             .max_concurrent_stream(128)
+            .raw_cfg_int(CString::new("grpc.use_local_subchannel_pool").unwrap(), 1)
             .load_balancing_policy(LbPolicy::RoundRobin);
 
         let channel = if self.ca.is_empty() {
