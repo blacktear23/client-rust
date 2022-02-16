@@ -79,9 +79,7 @@ impl SecurityManager {
         let cb = ChannelBuilder::new(env)
             .keepalive_time(Duration::from_secs(10))
             .keepalive_timeout(Duration::from_secs(3))
-            .max_concurrent_stream(128)
-            .raw_cfg_int(CString::new("grpc.use_local_subchannel_pool").unwrap(), 1)
-            .load_balancing_policy(LbPolicy::RoundRobin);
+            .raw_cfg_int(CString::new("grpc.use_local_subchannel_pool").unwrap(), 1);
 
         let channel = if self.ca.is_empty() {
             cb.connect(&addr)
