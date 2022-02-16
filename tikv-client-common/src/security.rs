@@ -79,7 +79,7 @@ impl SecurityManager {
         let cb = ChannelBuilder::new(env)
             .keepalive_time(Duration::from_secs(10))
             .keepalive_timeout(Duration::from_secs(3))
-            .max_concurrent_stream(2048)
+            .max_concurrent_stream(128)
             .load_balancing_policy(LbPolicy::RoundRobin);
 
         let channel = if self.ca.is_empty() {
