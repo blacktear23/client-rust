@@ -1,7 +1,7 @@
 // Copyright 2018 TiKV Project Authors. Licensed under Apache-2.0.
 
 use crate::Result;
-use grpcio::{Channel, ChannelBuilder, ChannelCredentialsBuilder, Environment};
+use grpcio::{Channel, ChannelBuilder, ChannelCredentialsBuilder, Environment, LbPolicy};
 use regex::Regex;
 use std::{
     fs::File,
@@ -78,7 +78,9 @@ impl SecurityManager {
 
         let cb = ChannelBuilder::new(env)
             .keepalive_time(Duration::from_secs(10))
-            .keepalive_timeout(Duration::from_secs(3));
+            .keepalive_timeout(Duration::from_secs(3))
+            .max_concurrent_stream(2048)
+            .load_balancing_policy(LbPolicy::RoundRobin);
 
         let channel = if self.ca.is_empty() {
             cb.connect(&addr)
