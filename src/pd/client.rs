@@ -19,7 +19,7 @@ use tikv_client_proto::{kvrpcpb, metapb};
 use tikv_client_store::{KvClient, KvConnect, TikvConnect};
 use tokio::sync::RwLock;
 
-const CQ_COUNT: usize = 1;
+const CQ_COUNT: usize = 4;
 const CLIENT_PREFIX: &str = "tikv-client";
 
 /// The PdClient handles all the encoding stuff.
