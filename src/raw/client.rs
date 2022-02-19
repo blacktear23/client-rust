@@ -188,6 +188,17 @@ impl<PdC: PdClient> Client<PdC> {
         plan.execute().await
     }
 
+    pub async fn get_ttl(&self, key: impl Into<Key>) -> Result<Option<u64>> {
+        debug!(self.logger, "invoking raw get key ttl request");
+        let request = new_raw_get_key_ttl_request(key.into(), self.cf.clone());
+        let plan = crate::request::PlanBuilder::new(self.rpc.clone(), request)
+            .retry_multi_region(DEFAULT_REGION_BACKOFF)
+            .merge(CollectSingle)
+            .post_process_default()
+            .plan();
+        plan.execute().await
+    }
+
     /// Create a new 'batch get' request.
     ///
     /// Once resolved this request will result in the fetching of the values associated with the
@@ -239,7 +250,19 @@ impl<PdC: PdClient> Client<PdC> {
     /// ```
     pub async fn put(&self, key: impl Into<Key>, value: impl Into<Value>) -> Result<()> {
         debug!(self.logger, "invoking raw put request");
-        let request = new_raw_put_request(key.into(), value.into(), self.cf.clone(), self.atomic);
+        let request = new_raw_put_request(key.into(), value.into(), self.cf.clone(), self.atomic, 0);
+        let plan = crate::request::PlanBuilder::new(self.rpc.clone(), request)
+            .retry_multi_region(DEFAULT_REGION_BACKOFF)
+            .merge(CollectSingle)
+            .extract_error()
+            .plan();
+        plan.execute().await?;
+        Ok(())
+    }
+
+    pub async fn put_with_ttl(&self, key: impl Into<Key>, value: impl Into<Value>, ttl: u64) -> Result<()> {
+        debug!(self.logger, "invoking raw put request");
+        let request = new_raw_put_request(key.into(), value.into(), self.cf.clone(), self.atomic, ttl);
         let plan = crate::request::PlanBuilder::new(self.rpc.clone(), request)
             .retry_multi_region(DEFAULT_REGION_BACKOFF)
             .merge(CollectSingle)
@@ -275,6 +298,27 @@ impl<PdC: PdClient> Client<PdC> {
             pairs.into_iter().map(Into::into),
             self.cf.clone(),
             self.atomic,
+            None,
+        );
+        let plan = crate::request::PlanBuilder::new(self.rpc.clone(), request)
+            .retry_multi_region(DEFAULT_REGION_BACKOFF)
+            .extract_error()
+            .plan();
+        plan.execute().await?;
+        Ok(())
+    }
+
+    pub async fn batch_put_with_ttl(
+        &self,
+        pairs: impl IntoIterator<Item = impl Into<KvPair>>,
+        ttls: Vec<u64>,
+    ) -> Result<()> {
+        debug!(self.logger, "invoking raw batch_put request");
+        let request = new_raw_batch_put_request(
+            pairs.into_iter().map(Into::into),
+            self.cf.clone(),
+            self.atomic,
+            Some(ttls),
         );
         let plan = crate::request::PlanBuilder::new(self.rpc.clone(), request)
             .retry_multi_region(DEFAULT_REGION_BACKOFF)
@@ -517,6 +561,31 @@ impl<PdC: PdClient> Client<PdC> {
             new_value.into(),
             previous_value.into(),
             self.cf.clone(),
+            0,
+        );
+        let plan = crate::request::PlanBuilder::new(self.rpc.clone(), req)
+            .retry_multi_region(DEFAULT_REGION_BACKOFF)
+            .merge(CollectSingle)
+            .post_process_default()
+            .plan();
+        plan.execute().await
+    }
+
+    pub async fn compare_and_swap_with_ttl(
+        &self,
+        key: impl Into<Key>,
+        previous_value: impl Into<Option<Value>>,
+        new_value: impl Into<Value>,
+        ttl: u64,
+    ) -> Result<(Option<Value>, bool)> {
+        debug!(self.logger, "invoking raw compare_and_swap request");
+        self.assert_atomic()?;
+        let req = new_cas_request(
+            key.into(),
+            new_value.into(),
+            previous_value.into(),
+            self.cf.clone(),
+            ttl,
         );
         let plan = crate::request::PlanBuilder::new(self.rpc.clone(), req)
             .retry_multi_region(DEFAULT_REGION_BACKOFF)
