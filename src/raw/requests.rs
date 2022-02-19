@@ -487,6 +487,7 @@ macro_rules! impl_raw_rpc_request {
 }
 
 impl_raw_rpc_request!(RawGetRequest);
+impl_raw_rpc_request!(RawGetKeyTtlRequest);
 impl_raw_rpc_request!(RawBatchGetRequest);
 impl_raw_rpc_request!(RawPutRequest);
 impl_raw_rpc_request!(RawBatchPutRequest);
@@ -498,6 +499,7 @@ impl_raw_rpc_request!(RawDeleteRangeRequest);
 impl_raw_rpc_request!(RawCasRequest);
 
 impl HasLocks for kvrpcpb::RawGetResponse {}
+impl HasLocks for kvrpcpb::RawGetKeyTtlResponse {}
 impl HasLocks for kvrpcpb::RawBatchGetResponse {}
 impl HasLocks for kvrpcpb::RawPutResponse {}
 impl HasLocks for kvrpcpb::RawBatchPutResponse {}
