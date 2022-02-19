@@ -311,7 +311,7 @@ impl KvRequest for kvrpcpb::RawGetKeyTtlRequest {
     type Response = kvrpcpb::RawGetKeyTtlResponse;
 }
 
-shardable_keys!(kvrpcpb::RawGetKeyTtlRequest);
+shardable_key!(kvrpcpb::RawGetKeyTtlRequest);
 collect_first!(kvrpcpb::RawGetKeyTtlResponse);
 
 impl SingleKey for kvrpcpb::RawGetKeyTtlRequest {
