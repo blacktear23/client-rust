@@ -89,13 +89,14 @@ pub fn new_raw_put_request(
     value: Vec<u8>,
     cf: Option<ColumnFamily>,
     atomic: bool,
+    ttl: u64,
 ) -> kvrpcpb::RawPutRequest {
     let mut req = kvrpcpb::RawPutRequest::default();
     req.set_key(key);
     req.set_value(value);
     req.maybe_set_cf(cf);
     req.set_for_cas(atomic);
-
+    req.set_ttl(ttl);
     req
 }
 
@@ -115,12 +116,15 @@ pub fn new_raw_batch_put_request(
     pairs: Vec<kvrpcpb::KvPair>,
     cf: Option<ColumnFamily>,
     atomic: bool,
+    ttls: Option<Vec<u64>>,
 ) -> kvrpcpb::RawBatchPutRequest {
     let mut req = kvrpcpb::RawBatchPutRequest::default();
     req.set_pairs(pairs);
     req.maybe_set_cf(cf);
     req.set_for_cas(atomic);
-
+    if let Some(ittls) = ttls {
+        req.set_ttls(ittls);
+    }
     req
 }
 
@@ -292,11 +296,49 @@ impl Merge<kvrpcpb::RawBatchScanResponse> for Collect {
     }
 }
 
+pub fn new_raw_get_key_ttl_request(
+    key: Vec<u8>,
+    cf: Option<ColumnFamily>
+) -> kvrpcpb::RawGetKeyTtlRequest {
+    let mut req = kvrpcpb::RawGetKeyTtlRequest::default();
+    req.set_key(key);
+    req.maybe_set_cf(cf);
+
+    req
+}
+
+impl KvRequest for kvrpcpb::RawGetKeyTtlRequest {
+    type Response = kvrpcpb::RawGetKeyTtlResponse;
+}
+
+shardable_keys!(kvrpcpb::RawGetKeyTtlRequest);
+collect_first!(kvrpcpb::RawGetKeyTtlResponse);
+
+impl SingleKey for kvrpcpb::RawGetKeyTtlRequest {
+    fn key(&self) -> &Vec<u8> {
+        &self.key
+    }
+}
+
+impl Process<kvrpcpb::RawGetKeyTtlResponse> for DefaultProcessor {
+    type Out = Option<u64>;
+
+    fn process(&self, input: Result<kvrpcpb::RawGetKeyTtlResponse>) -> Result<Self::Out> {
+        let mut input = input?;
+        Ok(if input.not_found {
+            None
+        } else {
+            Some(input.get_ttl())
+        })
+    }
+}
+
 pub fn new_cas_request(
     key: Vec<u8>,
     value: Vec<u8>,
     previous_value: Option<Vec<u8>>,
     cf: Option<ColumnFamily>,
+    ttl: u64,
 ) -> kvrpcpb::RawCasRequest {
     let mut req = kvrpcpb::RawCasRequest::default();
     req.set_key(key);
@@ -306,6 +348,7 @@ pub fn new_cas_request(
         None => req.set_previous_not_exist(true),
     }
     req.maybe_set_cf(cf);
+    req.set_ttl(ttl);
     req
 }
 
@@ -444,6 +487,7 @@ macro_rules! impl_raw_rpc_request {
 }
 
 impl_raw_rpc_request!(RawGetRequest);
+impl_raw_rpc_request!(RawGetKeyTtlRequest);
 impl_raw_rpc_request!(RawBatchGetRequest);
 impl_raw_rpc_request!(RawPutRequest);
 impl_raw_rpc_request!(RawBatchPutRequest);
@@ -455,6 +499,7 @@ impl_raw_rpc_request!(RawDeleteRangeRequest);
 impl_raw_rpc_request!(RawCasRequest);
 
 impl HasLocks for kvrpcpb::RawGetResponse {}
+impl HasLocks for kvrpcpb::RawGetKeyTtlResponse {}
 impl HasLocks for kvrpcpb::RawBatchGetResponse {}
 impl HasLocks for kvrpcpb::RawPutResponse {}
 impl HasLocks for kvrpcpb::RawBatchPutResponse {}
